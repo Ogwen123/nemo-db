@@ -23,7 +23,7 @@ fn main() {
         let parsed_input = cleanup(input);
         match parsed_input.as_str() {
             "/exit" => exit(),
-            _ => sql::handle_possible_sql(parsed_input)
+            _ => sql::handle_sql(parsed_input)
         }
     }
 }
@@ -31,4 +31,5 @@ fn main() {
 #[cfg(test)]
 mod tests {
     mod tokeniser_tests;
+    mod parser_tests;
 }

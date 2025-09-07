@@ -1,26 +1,33 @@
 use std::cmp::PartialEq;
-use std::default::Default;
 use std::fmt::Formatter;
-use crate::database::query::tokeniser::PositionType::Normal;
 
-enum TokensTypes {
-    Keyword(String),
-    Identifier(String),
-    Punctuation(String),
-    Value(String)
-}
+pub type TokenisedSQL = Vec<String>;
 
-type TokenisedSQL = Vec<String>;
 enum TokeniserErrorType {
-    KEYWORD,
-    OPERATOR
+    UnclosedString,
+    UnclosedBracket
 }
 
 impl TokeniserErrorType {
     fn string(&self) -> String {
         match self {
-            TokeniserErrorType::KEYWORD => String::from("Keyword Error"),
-            TokeniserErrorType::OPERATOR => String::from("Operator Error")
+            TokeniserErrorType::UnclosedString => String::from("Syntax Error: Unclosed String"),
+            TokeniserErrorType::UnclosedBracket => String::from("Syntax Error: Unclosed Bracket")
+        }
+    }
+}
+
+pub struct TokeniserError {
+    pub error_type: TokeniserErrorType,
+    pub message: String,
+}
+
+impl TokeniserError {
+    fn new<T>(_type: TokeniserErrorType, error: T) -> TokeniserError
+    where T: ToString {
+        TokeniserError {
+            error_type: _type,
+            message: error.to_string()
         }
     }
 }
@@ -31,16 +38,17 @@ impl std::fmt::Debug for TokeniserError {
     }
 }
 
-pub struct TokeniserError {
-    error_type: TokeniserErrorType,
-    message: String,
+#[derive(PartialEq)]
+struct StringTracker {
+    opener: String,
+    pos: usize
 }
 
 // used to track where we are when traversing the split sql
 #[derive(PartialEq)]
 enum PositionType {
     Normal,
-    String(String)
+    InString(StringTracker)
 }
 
 
@@ -57,11 +65,11 @@ where T: ToString {
 
     let mut processed_sql: Vec<String> = Vec::new();
 
-    let mut pos: PositionType = Normal;
+    let mut pos: PositionType = PositionType::Normal;
     let mut buffer = String::new();
 
     for (index, val) in split_sql.iter().enumerate() {
-        if pos == Normal {
+        if pos == PositionType::Normal {
             if val == ";" {
                 if buffer.len() > 0 {processed_sql.push(buffer)}
                 processed_sql.push(";".to_string());
@@ -73,7 +81,10 @@ where T: ToString {
                 buffer = String::new()
             } else {
                 if val == "\"" || val == "'" {
-                    pos = PositionType::String(val.clone());
+                    pos = PositionType::InString(StringTracker {
+                        opener: val.clone(),
+                        pos: index
+                    });
                     buffer += val
                 } else {
                     buffer += val;
@@ -81,7 +92,7 @@ where T: ToString {
             }
         } else {
             let char: String = match &pos {
-                PositionType::String(res) => res.clone(),
+                PositionType::InString(res) => res.opener.clone(),
                 _ => String::new()
             };
 
@@ -92,7 +103,7 @@ where T: ToString {
                     buffer += val
                 } else {
                     buffer += val;
-                    pos = Normal;
+                    pos = PositionType::Normal;
                     processed_sql.push(buffer);
                     buffer = String::new();
                 }
@@ -100,6 +111,13 @@ where T: ToString {
                 buffer += val;
             }
         }
+    }
+
+    match pos {
+        PositionType::InString(res) => {
+            return Err(TokeniserError::new(TokeniserErrorType::UnclosedString, format!("{}: {} {}", TokeniserErrorType::UnclosedString.string(), "Unclosed string at pos", res.pos)))
+        },
+        _ => {}
     }
 
     Ok(processed_sql)
