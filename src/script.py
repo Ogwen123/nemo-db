@@ -81,13 +81,25 @@ text = """ADD 	Adds a column in an existing table
         WHERE"""
 
 l = []
+l2 = []
 
 for i in text.split("\n"):
     if i == "": continue
     j = i.split("\u0009")[0].strip()
     if j.upper() == j:
-        l.append(f"pub const {j.replace(" ", "_")}: &'static str = \"{j}\";")
+        b = ""
+        for k in j.split(" "):
+            b += k[0] + k[1:].lower()
+        l.append(b + ",")
+        l2.append(f"Keywords::{b} => \"{j}\",")
 
-print("enum Keywords {} \n impl Keywords {\n")
+print("enum Keywords {")
 print("\n".join(l))
+print("}")
+
+print("impl Keywords {")
+print("fn string(self) -> &'static str {")
+print("match self {")
+print("\n".join(l2))
+print("}")
 print("}")

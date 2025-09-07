@@ -4,7 +4,7 @@ mod utils;
 use std::io;
 use std::io::Write;
 use crate::utils::logger::{info};
-use crate::database::sql::sql;
+use crate::database::query::sql;
 use crate::utils::utils::cleanup;
 
 fn exit() {
@@ -26,4 +26,9 @@ fn main() {
             _ => sql::handle_possible_sql(parsed_input)
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    mod tokeniser_tests;
 }
