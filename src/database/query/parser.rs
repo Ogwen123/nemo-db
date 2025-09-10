@@ -1,5 +1,5 @@
+use crate::database::query::constants::Token;
 use crate::database::query::parser::ASTErrorTypes::SYNTAX;
-use crate::database::query::tokeniser::TokenisedSQL;
 
 enum ASTErrorTypes {
     SYNTAX
@@ -32,7 +32,7 @@ pub struct AST {
 }
 
 impl AST {
-    pub fn parse(tokens: TokenisedSQL) -> Result<AST, ASTError> {
+    pub fn parse(tokens: Vec<Token>) -> Result<AST, ASTError> {
         Err(ASTError::new(SYNTAX, "temp"))
     }
 }

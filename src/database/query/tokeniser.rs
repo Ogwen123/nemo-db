@@ -1,9 +1,8 @@
 use std::cmp::PartialEq;
 use std::fmt::Formatter;
+use crate::database::query::constants::Token;
 
-pub type TokenisedSQL = Vec<String>;
-
-enum TokeniserErrorType {
+pub enum TokeniserErrorType {
     UnclosedString,
     UnclosedBracket
 }
@@ -51,8 +50,7 @@ enum PositionType {
     InString(StringTracker)
 }
 
-
-pub fn tokenise<T>(_sql: T) -> Result<TokenisedSQL, TokeniserError>
+pub fn splitter<T>(_sql: T) -> Result<Vec<String>, TokeniserError>
 where T: ToString {
     let sql = _sql.to_string();
 
@@ -67,8 +65,9 @@ where T: ToString {
 
     let mut pos: PositionType = PositionType::Normal;
     let mut buffer = String::new();
-
+    
     for (index, val) in split_sql.iter().enumerate() {
+        if val.len() == 0 { continue; }
         if pos == PositionType::Normal {
             if val == ";" {
                 if buffer.len() > 0 {processed_sql.push(buffer)}
@@ -76,18 +75,24 @@ where T: ToString {
                 break
             }
 
+            let char_val: char = val.chars().nth(0).unwrap();
+
             if val == " " {
-                processed_sql.push(buffer);
+                if buffer.len() > 0 {processed_sql.push(buffer); }
                 buffer = String::new()
             } else {
-                if val == "\"" || val == "'" {
+                if char_val == '"' || char_val == '\'' {
                     pos = PositionType::InString(StringTracker {
                         opener: val.clone(),
                         pos: index
                     });
                     buffer += val
-                } else {
+                } else if char_val.is_ascii_alphabetic() {
+                    // if it alphabetic then is it just part of the identifier in the buffer
                     buffer += val;
+                } else {
+                    // add symbols individually and let the tokenise function handle things like != and <=
+                    processed_sql.push(val.clone());
                 }
             }
         } else {
@@ -121,4 +126,19 @@ where T: ToString {
     }
 
     Ok(processed_sql)
+}
+
+pub fn tokenise<T>(_sql: T) -> Result<Vec<Token>, TokeniserError>
+where T: ToString {
+    let split_sql = splitter(_sql).map_err(|x| x)?;
+
+    let mut tokens: Vec<Token> = Vec::new();
+
+    let token_strings: Vec<(Token, String)> = Vec::new();
+    
+    for i in split_sql {
+        
+    }
+
+    Ok(tokens)
 }
